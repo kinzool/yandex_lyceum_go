@@ -1,13 +1,10 @@
 package calculation
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 )
-
-var ErrorInvalidExpression = errors.New("expression is not valid")
 
 func Calc(expression string) (float64, error) {
 	expression = strings.ReplaceAll(expression, " ", "")
