@@ -12,35 +12,33 @@ type Request struct {
 }
 
 type Answer struct {
-	Result float64 `json:"result"`
-}
-type Error struct {
-	Error string `json:"error"`
+	Id int `json:"id"`
 }
 
 var req Request
 
-func ErrorMiddleware(next http.HandlerFunc) http.HandlerFunc {
+var indexes = []int{0}
+
+func CalculateMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		_, err := calculation.Calc(req.Expression)
 		if err != nil {
 			if errors.Is(err, calculation.ErrorInvalidExpression) {
-				resp := Error{Error: "Expression is not valid"}
-				answ, _ := json.Marshal(resp)
 				w.WriteHeader(http.StatusUnprocessableEntity)
-				w.Write(answ)
 				return
 			} else {
-				resp := Error{Error: "Internal server error"}
-				answ, _ := json.Marshal(resp)
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write(answ)
 				return
 			}
 		}
-		next.ServeHTTP(w, r)
+		newId := indexes[len(indexes)] + 1
+		indexes = append(indexes, newId)
+		resp := Answer{Id: newId}
+		answ, _ := json.Marshal(resp)
+		w.WriteHeader(http.StatusOK)
+		w.Write(answ)
 	})
 }
 
@@ -52,7 +50,17 @@ func CalculateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(answ)
 }
 
+func ExpressionsHandler(w http.ResponseWriter, r *http.Request) {}
+
+func IdHandler(w http.ResponseWriter, r *http.Request) {}
+
+func TaskHandler(w http.ResponseWriter, r *http.Request) {}
+
 func RunApplication() {
-	http.HandleFunc("/api/v1/calculate", ErrorMiddleware(CalculateHandler))
-	http.ListenAndServe(":8080", nil)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/calculate", CalculateMiddleware(CalculateHandler))
+	mux.HandleFunc("/api/v1/expressions", ExpressionsHandler)
+	mux.HandleFunc("/api/v1/expressions/:id", IdHandler)
+	mux.HandleFunc("/internal/task", TaskHandler)
+	http.ListenAndServe(":8080", mux)
 }
