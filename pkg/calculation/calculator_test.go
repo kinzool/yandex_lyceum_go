@@ -51,19 +51,19 @@ func TestCalc(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:       "simple",
+			name:       "simple2",
 			expression: "1-1*",
 		},
 		{
-			name:       "priority",
+			name:       "priority2",
 			expression: "2+2**2",
 		},
 		{
-			name:       "priority with brackets",
+			name:       "priority with brackets2",
 			expression: "((2+2-*(2",
 		},
 		{
-			name:       "/",
+			name:       "/2",
 			expression: "",
 		},
 	}
