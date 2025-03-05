@@ -59,6 +59,10 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
     "id": "1"
 }
 ```
+Если метод запроса будет неправильным, то получим ошибку с кодом 405:
+```
+{"error":"Wrong Method"}
+```
 
 ### 2) Получение списка выражений (GET /api/v1/expressions)
 ### Получаем ответ с кодом 200:
@@ -73,6 +77,11 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
     ]
 }
 ```
+Если метод запроса будет неправильным, то получим ошибку с кодом 405:
+```
+{"error":"Wrong Method"}
+```
+
 ### 3) Получение выражения по ID (GET /api/v1/expressions/{id})
 Если будет введен несуществующий id, то получим ошибку с кодом 404:
 ```
@@ -93,8 +102,8 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
 ```
 GET /internal/task
 ```
-Пример ответа (200):
-```json
+Пример ответа с кодом 200:
+```
 {
     "task": {
         "id": "1",
