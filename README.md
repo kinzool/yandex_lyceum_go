@@ -74,7 +74,7 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
 }
 ```
 ### 3) Получение выражения по ID (GET /api/v1/expressions/{id})
-Если будет введен несуществующий id, то получим:
+Если будет введен несуществующий id, то получим ошибку с кодом 404:
 ```
 {"error":"Expression not found"}
 ```
