@@ -7,7 +7,7 @@
 ### 1) Склонировать репозиторий
 ```
 git clone https://github.com/kinzool/yandex_lyceum_go
-cd calc_go
+cd yandex_lyceum_go
 ```
 ### 2) Запустить оркестратор и установить значения для переменных среды
 ```
