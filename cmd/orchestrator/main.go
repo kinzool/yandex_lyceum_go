@@ -2,8 +2,7 @@ package main
 
 import (
 	"log"
-
-	"yandexlyceum/yandex_lyceum_go/internal/application"
+	"yandexlyceum/internal/application"
 )
 
 func main() {

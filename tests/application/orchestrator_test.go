@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"yandexlyceum/yandex_lyceum_go/internal/application"
+	"yandexlyceum/internal/application"
 )
 
 type CalculateHandlerRequest struct {

@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"
-	"yandexlyceum/yandex_lyceum_go/pkg/calculation"
+	"yandexlyceum/pkg/calculation"
 )
 
 func TestCompute(t *testing.T) {

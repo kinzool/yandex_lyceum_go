@@ -9,8 +9,7 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"yandexlyceum/yandex_lyceum_go/pkg/calculation"
+	"yandexlyceum/pkg/calculation"
 )
 
 type Agent struct {
