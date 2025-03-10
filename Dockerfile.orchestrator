@@ -1,0 +1,6 @@
+FROM golang:1.23
+WORKDIR /agent
+COPY . .
+RUN go mod download
+RUN go build -o orchestrator ./cmd/orchestrator/main.go
+CMD ["./orchestrator"]

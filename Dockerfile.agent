@@ -1,0 +1,6 @@
+FROM golang:1.23
+WORKDIR /agent
+COPY . .
+RUN go mod download
+RUN go build -o agent ./cmd/agent/main.go
+CMD ["./agent"]
