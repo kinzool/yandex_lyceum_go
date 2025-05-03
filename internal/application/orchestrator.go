@@ -1,13 +1,19 @@
 package application
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+	"yandexlyceum/internal/database"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Config struct {
@@ -48,6 +54,11 @@ func ConfigFromEnv() *Config {
 	}
 }
 
+type Registration struct {
+	Login    string
+	Password string
+}
+
 type Orchestrator struct {
 	Config      *Config
 	exprStore   map[string]*Expression
@@ -56,6 +67,7 @@ type Orchestrator struct {
 	mu          sync.Mutex
 	exprCounter int64
 	taskCounter int64
+	db          *sql.DB
 }
 
 func NewOrchestrator() *Orchestrator {
@@ -268,8 +280,70 @@ func (o *Orchestrator) AgentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (o *Orchestrator) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"Wrong Method"}`, http.StatusMethodNotAllowed)
+	} else if r.Method == http.MethodPost {
+		var data Registration
+		err := json.NewDecoder(r.Body).Decode(&data)
+		if err != nil {
+			http.Error(w, `{"error":"Error decoding JSON"}`, http.StatusBadRequest)
+			return
+		}
+		generatedPassword, err := GeneratePassword(data.Password)
+		if err != nil {
+			http.Error(w, `{"error":"Error encoding password"}`, http.StatusInternalServerError)
+		}
+		err = database.InsertUsers(context.TODO(), data.Login, generatedPassword, o.db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			log.Println("User successfully added")
+			http.Error(w, "successful registration", http.StatusOK)
+		}
+	}
+}
+
+func (o *Orchestrator) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"Wrong Method"}`, http.StatusMethodNotAllowed)
+	} else if r.Method == http.MethodPost {
+		var data Registration
+		err := json.NewDecoder(r.Body).Decode(&data)
+		if err != nil {
+			http.Error(w, `{"error":"Error decoding JSON"}`, http.StatusBadRequest)
+			return
+		}
+		id := database.GetUserID(context.TODO(), data.Login, o.db)
+		authentificated := database.IsAuth(context.TODO(), data.Login, data.Password, o.db)
+		if !authentificated {
+			http.Error(w, `{"error":"Invalid credentials"}`, http.StatusUnauthorized)
+			return
+		}
+		log.Printf("Successfull login for %s\n", data.Login)
+		generatedToken, err := GenerateJWT(id, data.Login)
+		if err != nil {
+			http.Error(w, `{"error":"Error generating jwt"}`, http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"token": generatedToken,
+		})
+	}
+}
 func (o *Orchestrator) RunServer() error {
 	mux := http.NewServeMux()
+	db, err := database.InitDB("finalTask.db")
+	o.db = db
+	defer db.Close()
+	if err != nil {
+		log.Println("Error opening database")
+	}
+	mux.HandleFunc("/api/v1/register", o.RegisterHandler)
+	mux.HandleFunc("/api/v1/login", o.LoginHandler)
 	mux.HandleFunc("/api/v1/calculate", o.CalculateHandler)
 	mux.HandleFunc("/api/v1/expressions", o.ExpressionsHandler)
 	mux.HandleFunc("/api/v1/expressions/", o.ExpressionByIDHandler)
