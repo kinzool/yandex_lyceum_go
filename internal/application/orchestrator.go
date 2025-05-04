@@ -13,6 +13,7 @@ import (
 	"time"
 	"yandexlyceum/internal/database"
 
+	"github.com/golang-jwt/jwt/v5"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -115,7 +116,23 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	o.mu.Lock()
-	o.exprCounter++
+
+	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid user data", http.StatusInternalServerError)
+		return
+	}
+
+	userIDFloat, _ := claims["user_id"].(float64)
+	userID := int(userIDFloat)
+
+	id, err := database.AddExpression(context.TODO(), userID, req.Expression, o.db)
+	if err != nil {
+		http.Error(w, `{"error":"Something went wrong"}`, http.StatusInternalServerError)
+		return
+	}
+
+	o.exprCounter = int64(id)
 	exprID := fmt.Sprintf("%d", o.exprCounter)
 	expr := &Expression{
 		ID:     exprID,
@@ -146,8 +163,31 @@ func (o *Orchestrator) ExpressionsHandler(w http.ResponseWriter, r *http.Request
 		}
 		exprs = append(exprs, expr)
 	}
+	for _, expression := range exprs {
+		id, _ := strconv.Atoi(expression.ID)
+		database.AddAnswer(context.TODO(), id, float64(*expression.Result), o.db)
+	}
+
+	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid user data", http.StatusInternalServerError)
+		return
+	}
+
+	userIDFloat, _ := claims["user_id"].(float64)
+	userID := int(userIDFloat)
+
+	answ, err := database.GetExpressions(userID, o.db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if len(answ) == 0 {
+		http.Error(w, `{"error":"No expressions"}`, http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": exprs})
+	json.NewEncoder(w).Encode(map[string]interface{}{"expressions": answ})
 }
 
 func (o *Orchestrator) ExpressionByIDHandler(w http.ResponseWriter, r *http.Request) {
@@ -155,20 +195,31 @@ func (o *Orchestrator) ExpressionByIDHandler(w http.ResponseWriter, r *http.Requ
 		http.Error(w, `{"error":"Wrong Method"}`, http.StatusMethodNotAllowed)
 		return
 	}
+
 	id := r.URL.Path[len("/api/v1/expressions/"):]
-	o.mu.Lock()
-	expr, ok := o.exprStore[id]
-	o.mu.Unlock()
+
+	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
 	if !ok {
-		http.Error(w, `{"error":"Expression not found"}`, http.StatusNotFound)
+		http.Error(w, "Invalid user data", http.StatusInternalServerError)
 		return
 	}
-	if expr.AST != nil && expr.AST.IsLeaf {
-		expr.Status = "completed"
-		expr.Result = &expr.AST.Value
+	userIDFloat, _ := claims["user_id"].(float64)
+	userID := int(userIDFloat)
+
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		http.Error(w, `{"error":"Invalid id"}`, http.StatusInternalServerError)
+		return
 	}
+
+	res_expr, err := database.GetExpressionByID(context.TODO(), userID, intId, o.db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"expression": expr})
+	json.NewEncoder(w).Encode(map[string]interface{}{"expression": res_expr})
 }
 
 func (o *Orchestrator) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
@@ -327,6 +378,17 @@ func (o *Orchestrator) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"Error generating jwt"}`, http.StatusInternalServerError)
 			return
 		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "auth_token",
+			Value:    generatedToken,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+			Path:     "/",
+			MaxAge:   86400,
+		})
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -344,9 +406,9 @@ func (o *Orchestrator) RunServer() error {
 	}
 	mux.HandleFunc("/api/v1/register", o.RegisterHandler)
 	mux.HandleFunc("/api/v1/login", o.LoginHandler)
-	mux.HandleFunc("/api/v1/calculate", o.CalculateHandler)
-	mux.HandleFunc("/api/v1/expressions", o.ExpressionsHandler)
-	mux.HandleFunc("/api/v1/expressions/", o.ExpressionByIDHandler)
+	mux.HandleFunc("/api/v1/calculate", AuthMiddleware(o.CalculateHandler))
+	mux.HandleFunc("/api/v1/expressions", AuthMiddleware(o.ExpressionsHandler))
+	mux.HandleFunc("/api/v1/expressions/", AuthMiddleware(o.ExpressionByIDHandler))
 	mux.HandleFunc("/internal/task", o.AgentHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"Not Found"}`, http.StatusNotFound)

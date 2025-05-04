@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Expression struct {
+	Id     int     `json:"id"`
+	Result float64 `json:"result"`
+}
+
 func InitDB(dataSourceName string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dataSourceName)
 	if err != nil {
@@ -77,7 +82,7 @@ func InsertUsers(ctx context.Context, login, password string, db *sql.DB) error 
 
 func GetUserID(ctx context.Context, login string, db *sql.DB) int {
 	var id int
-	var q = `SELECT password FROM users WHERE login = $1`
+	var q = `SELECT id FROM users WHERE login = $1`
 	err := db.QueryRowContext(ctx, q, login).Scan(&id)
 	if err != nil {
 		return 0
@@ -94,4 +99,57 @@ func IsAuth(ctx context.Context, login, password string, db *sql.DB) bool {
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 	return err == nil
+}
+
+func AddExpression(ctx context.Context, user_id int, expression string, db *sql.DB) (int, error) {
+	var q = `INSERT INTO expressions (user_id, expression) values ($1, $2)`
+	result, err := db.ExecContext(ctx, q, user_id, expression)
+	if err != nil {
+		return 0, errors.New(`{"error": "something went wrong"}`)
+	}
+	id, _ := result.LastInsertId()
+	log.Println("Expression successfully added")
+	return int(id), nil
+}
+
+func AddAnswer(ctx context.Context, id int, result float64, db *sql.DB) error {
+	var q = `UPDATE expressions
+	SET result = $1
+	WHERE id = $2`
+	_, err := db.ExecContext(ctx, q, result, id)
+	if err != nil {
+		return errors.New(`{"error": "something went wrong"}`)
+	}
+	return nil
+}
+
+func GetExpressions(user_id int, db *sql.DB) ([]Expression, error) {
+	var answ []Expression
+	var q = `SELECT id, result FROM expressions
+	WHERE user_id = $1`
+	rows, err := db.Query(q, user_id)
+	if err != nil {
+		return nil, errors.New(`{"error": "something went wrong"}`)
+	}
+	for rows.Next() {
+		var id int
+		var result float64
+		if err := rows.Scan(&id, &result); err != nil {
+			return nil, errors.New(`{"error": "something went wrong"}`)
+		}
+		answ = append(answ, Expression{Id: id, Result: result})
+	}
+	return answ, nil
+}
+
+func GetExpressionByID(ctx context.Context, user_id, id int, db *sql.DB) (Expression, error) {
+	var answ_id int
+	var answ_result float64
+	var q = `SELECT id, result FROM expressions
+	WHERE user_id = $1 AND id = $2`
+	err := db.QueryRowContext(ctx, q, user_id, id).Scan(&answ_id, &answ_result)
+	if err != nil {
+		return Expression{}, errors.New(`{"error": "empty answer"}`)
+	}
+	return Expression{Id: answ_id, Result: answ_result}, nil
 }
