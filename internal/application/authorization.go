@@ -51,7 +51,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
-			http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+			http.Error(w, `{"error": "Missing token"}`, http.StatusUnauthorized)
 			return
 		}
 		token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
@@ -62,7 +62,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusForbidden)
+			http.Error(w, `{"error": "Invalid token"}`, http.StatusForbidden)
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {

@@ -119,7 +119,7 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 
 	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
 	if !ok {
-		http.Error(w, "Invalid user data", http.StatusInternalServerError)
+		http.Error(w, `{"error": "Invalid user data"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (o *Orchestrator) ExpressionsHandler(w http.ResponseWriter, r *http.Request
 
 	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
 	if !ok {
-		http.Error(w, "Invalid user data", http.StatusInternalServerError)
+		http.Error(w, `{"error": "Invalid user data"}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -275,7 +275,7 @@ func (o *Orchestrator) PostTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	o.mu.Unlock()
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"result accepted"}`))
+	w.Write([]byte(`{"status":"Result accepted"}`))
 }
 
 func (o *Orchestrator) ScheduleTasks(expr *Expression) {
@@ -350,7 +350,7 @@ func (o *Orchestrator) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else {
-			log.Println("User successfully added")
+			log.Printf("User with login '%s' successfully added\n", data.Login)
 			http.Error(w, "successful registration", http.StatusOK)
 		}
 	}

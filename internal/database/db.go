@@ -17,7 +17,8 @@ type Expression struct {
 }
 
 func InitDB(dataSourceName string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dataSourceName)
+	dbPath := "../../internal/database/" + dataSourceName
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func InsertUsers(ctx context.Context, login, password string, db *sql.DB) error 
 	).Scan(&exists)
 
 	if err != nil {
-		return fmt.Errorf(`{"error": "failed to check user existence: %w"}`, err)
+		return fmt.Errorf(`{"error": "Failed to check user existence: %w"}`, err)
 	}
 
 	if exists {
@@ -75,7 +76,7 @@ func InsertUsers(ctx context.Context, login, password string, db *sql.DB) error 
 	`
 	_, err = db.ExecContext(ctx, q, login, password)
 	if err != nil {
-		return errors.New(`{"error": "something went wrong"}`)
+		return errors.New(`{"error": "Something went wrong"}`)
 	}
 	return nil
 }
@@ -105,10 +106,10 @@ func AddExpression(ctx context.Context, user_id int, expression string, db *sql.
 	var q = `INSERT INTO expressions (user_id, expression) values ($1, $2)`
 	result, err := db.ExecContext(ctx, q, user_id, expression)
 	if err != nil {
-		return 0, errors.New(`{"error": "something went wrong"}`)
+		return 0, errors.New(`{"error": "Something went wrong"}`)
 	}
 	id, _ := result.LastInsertId()
-	log.Println("Expression successfully added")
+	log.Printf("Expression '%s' successfully added", expression)
 	return int(id), nil
 }
 
@@ -118,7 +119,7 @@ func AddAnswer(ctx context.Context, id int, result float64, db *sql.DB) error {
 	WHERE id = $2`
 	_, err := db.ExecContext(ctx, q, result, id)
 	if err != nil {
-		return errors.New(`{"error": "something went wrong"}`)
+		return errors.New(`{"error": "Something went wrong"}`)
 	}
 	return nil
 }
@@ -129,13 +130,13 @@ func GetExpressions(user_id int, db *sql.DB) ([]Expression, error) {
 	WHERE user_id = $1`
 	rows, err := db.Query(q, user_id)
 	if err != nil {
-		return nil, errors.New(`{"error": "something went wrong"}`)
+		return nil, errors.New(`{"error": "Something went wrong"}`)
 	}
 	for rows.Next() {
 		var id int
 		var result float64
 		if err := rows.Scan(&id, &result); err != nil {
-			return nil, errors.New(`{"error": "something went wrong"}`)
+			return nil, errors.New(`{"error": "Something went wrong"}`)
 		}
 		answ = append(answ, Expression{Id: id, Result: result})
 	}
@@ -149,7 +150,7 @@ func GetExpressionByID(ctx context.Context, user_id, id int, db *sql.DB) (Expres
 	WHERE user_id = $1 AND id = $2`
 	err := db.QueryRowContext(ctx, q, user_id, id).Scan(&answ_id, &answ_result)
 	if err != nil {
-		return Expression{}, errors.New(`{"error": "empty answer"}`)
+		return Expression{}, errors.New(`{"error": "Empty answer"}`)
 	}
 	return Expression{Id: answ_id, Result: answ_result}, nil
 }
