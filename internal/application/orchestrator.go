@@ -68,7 +68,7 @@ type Orchestrator struct {
 	mu          sync.Mutex
 	exprCounter int64
 	taskCounter int64
-	db          *sql.DB
+	Db          *sql.DB
 }
 
 func NewOrchestrator() *Orchestrator {
@@ -117,7 +117,7 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	o.mu.Lock()
 
-	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
+	claims, ok := r.Context().Value(UserContextKey).(jwt.MapClaims)
 	if !ok {
 		http.Error(w, `{"error": "Invalid user data"}`, http.StatusInternalServerError)
 		return
@@ -126,7 +126,7 @@ func (o *Orchestrator) CalculateHandler(w http.ResponseWriter, r *http.Request) 
 	userIDFloat, _ := claims["user_id"].(float64)
 	userID := int(userIDFloat)
 
-	id, err := database.AddExpression(context.TODO(), userID, req.Expression, o.db)
+	id, err := database.AddExpression(context.TODO(), userID, req.Expression, o.Db)
 	if err != nil {
 		http.Error(w, `{"error":"Something went wrong"}`, http.StatusInternalServerError)
 		return
@@ -165,10 +165,10 @@ func (o *Orchestrator) ExpressionsHandler(w http.ResponseWriter, r *http.Request
 	}
 	for _, expression := range exprs {
 		id, _ := strconv.Atoi(expression.ID)
-		database.AddAnswer(context.TODO(), id, float64(*expression.Result), o.db)
+		database.AddAnswer(context.TODO(), id, float64(*expression.Result), o.Db)
 	}
 
-	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
+	claims, ok := r.Context().Value(UserContextKey).(jwt.MapClaims)
 	if !ok {
 		http.Error(w, `{"error": "Invalid user data"}`, http.StatusInternalServerError)
 		return
@@ -177,7 +177,7 @@ func (o *Orchestrator) ExpressionsHandler(w http.ResponseWriter, r *http.Request
 	userIDFloat, _ := claims["user_id"].(float64)
 	userID := int(userIDFloat)
 
-	answ, err := database.GetExpressions(userID, o.db)
+	answ, err := database.GetExpressions(userID, o.Db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -198,7 +198,7 @@ func (o *Orchestrator) ExpressionByIDHandler(w http.ResponseWriter, r *http.Requ
 
 	id := r.URL.Path[len("/api/v1/expressions/"):]
 
-	claims, ok := r.Context().Value(userContextKey).(jwt.MapClaims)
+	claims, ok := r.Context().Value(UserContextKey).(jwt.MapClaims)
 	if !ok {
 		http.Error(w, "Invalid user data", http.StatusInternalServerError)
 		return
@@ -212,7 +212,7 @@ func (o *Orchestrator) ExpressionByIDHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	res_expr, err := database.GetExpressionByID(context.TODO(), userID, intId, o.db)
+	res_expr, err := database.GetExpressionByID(context.TODO(), userID, intId, o.Db)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -345,7 +345,7 @@ func (o *Orchestrator) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, `{"error":"Error encoding password"}`, http.StatusInternalServerError)
 		}
-		err = database.InsertUsers(context.TODO(), data.Login, generatedPassword, o.db)
+		err = database.InsertUsers(context.TODO(), data.Login, generatedPassword, o.Db)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -366,8 +366,8 @@ func (o *Orchestrator) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"Error decoding JSON"}`, http.StatusBadRequest)
 			return
 		}
-		id := database.GetUserID(context.TODO(), data.Login, o.db)
-		authentificated := database.IsAuth(context.TODO(), data.Login, data.Password, o.db)
+		id := database.GetUserID(context.TODO(), data.Login, o.Db)
+		authentificated := database.IsAuth(context.TODO(), data.Login, data.Password, o.Db)
 		if !authentificated {
 			http.Error(w, `{"error":"Invalid credentials"}`, http.StatusUnauthorized)
 			return
@@ -399,7 +399,7 @@ func (o *Orchestrator) LoginHandler(w http.ResponseWriter, r *http.Request) {
 func (o *Orchestrator) RunServer() error {
 	mux := http.NewServeMux()
 	db, err := database.InitDB("finalTask.db")
-	o.db = db
+	o.Db = db
 	defer db.Close()
 	if err != nil {
 		log.Println("Error opening database")

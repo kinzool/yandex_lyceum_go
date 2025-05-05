@@ -13,7 +13,7 @@ import (
 type contextKey string
 
 const (
-	userContextKey contextKey = "user"
+	UserContextKey contextKey = "user"
 )
 
 const (
@@ -38,6 +38,9 @@ func GenerateJWT(user_id int, login string) (string, error) {
 }
 
 func GeneratePassword(password string) (string, error) {
+	if len(password) > 72 {
+		password = password[:72]
+	}
 	saltedBytes := []byte(password)
 	hashedBytes, err := bcrypt.GenerateFromPassword(saltedBytes, bcrypt.DefaultCost)
 	if err != nil {
@@ -66,7 +69,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			ctx := context.WithValue(r.Context(), userContextKey, claims)
+			ctx := context.WithValue(r.Context(), UserContextKey, claims)
 			r = r.WithContext(ctx)
 		}
 		next.ServeHTTP(w, r)
