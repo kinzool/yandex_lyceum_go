@@ -1,6 +1,10 @@
-FROM golang:1.23
-WORKDIR /agent
-COPY . .
+FROM golang:1.24-alpine
+WORKDIR /app
+COPY go.mod go.sum ./
 RUN go mod download
-RUN go build -o agent ./cmd/agent/main.go
-CMD ["./agent"]
+COPY . .
+RUN go build -o agent ./cmd/agent
+
+ENV COMPUTING_POWER=4 \
+    ORCHESTRATOR_URL=http://orchestrator:8080
+ENTRYPOINT ["./agent"]

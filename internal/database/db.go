@@ -17,8 +17,7 @@ type Expression struct {
 }
 
 func InitDB(dataSourceName string) (*sql.DB, error) {
-	dbPath := "../../internal/database/" + dataSourceName
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
