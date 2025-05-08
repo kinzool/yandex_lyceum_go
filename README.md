@@ -2,12 +2,12 @@
 ## Описание
 Я реализовал веб-сервер на языке Go, который принимает POST- и GET- запросы в endpoint'ах "/login", "/register", "/calculate", "/expressions", 
 "/expressions/id", каждый из которых выполняет определенный функционал, соответствующий условиям задачи. Эта программа позволяет персистентно и многопользовательски распределенно вычислять арифметические выражения.
--------------------------------------------------------------------------------------------------------
 В этой версии приложения используется база данных sqlite, в которой создаются две таблицы: users и expressions. 
 
-В таблице users хранятся данные и зарегистрированных пользователях в столбцах с названиями id, login и password. Пароль хранится в хешированном виде, что позволяет сохранять безопасность.
+В таблице users хранятся данные о зарегистрированных пользователях в столбцах с названиями id, login и password. Пароль хранится в хешированном виде, что позволяет сохранять безопасность.
 
 В таблице expressions хранятся выражения, которые добавляюся пользователями в столбцах с названиями id, user_id, expression, result.
+
 -------------------------------------------------------------------------------------------------------
 ## Инструкция по запуску
 ## Для того, чтобы запустить сервер, необходимо:
@@ -48,7 +48,6 @@ go run .\cmd\agent\main.go
 ## Архитектура приложения (как все работает)
 **Оркестратор** (порт 8080 по умолчанию):
 
--Регис
 - Принимает выражения через REST API
 - Разбивает выражения на атомарные задачи
 - Управляет очередью задач
@@ -116,13 +115,13 @@ curl --location 'localhost:8080/api/v1/login' \
 
 
 ### 3) Добавление выражения (POST /api/v1/calculate)
-#### Пример запроса:
+### Пример запроса:
 ```
 curl --location 'localhost:8080/api/v1/calculate' \
 --header 'Content-Type: application/json' \
---header 'Cookie: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MDI4NzYsImlhdCI6MTc0NjcwMjI3NiwibG9naW4iOiIxIiwibmJmIjoxNzQ2NzAyMjgxLCJ1c2VyX2lkIjoxfQ.sI4G6BJPLBpRFhywQ2_hYnRU69mssKoNL99nof7sBDQ' \
+--header 'Cookie: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MzkyODYsImlhdCI6MTc0NjczODY4NiwibG9naW4iOiIyIiwibmJmIjoxNzQ2NzM4NjkxLCJ1c2VyX2lkIjoyfQ.h2uOIrAMBZ3RmNZuwCQiy3FmPNPKqTEaC3ouH7_O450' \
 --data '{
-    "expression":"2+1"
+    "expression": "2+1"
 }'
 ```
 ### Получаем ответ с кодом 201:
@@ -144,6 +143,13 @@ curl --location 'localhost:8080/api/v1/calculate' \
 ------------------------------------------------------------------------------------
 
 ### 4) Получение списка выражений (GET /api/v1/expressions)
+
+#### Пример запроса:
+```
+curl --location 'localhost:8080/api/v1/expressions' \
+--header 'Cookie: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MzkyODYsImlhdCI6MTc0NjczODY4NiwibG9naW4iOiIyIiwibmJmIjoxNzQ2NzM4NjkxLCJ1c2VyX2lkIjoyfQ.h2uOIrAMBZ3RmNZuwCQiy3FmPNPKqTEaC3ouH7_O450'
+```
+
 ### Получаем ответ с кодом 200:
 ```
 {
@@ -161,6 +167,11 @@ curl --location 'localhost:8080/api/v1/calculate' \
 ```
 
 ### 3) Получение выражения по ID (GET /api/v1/expressions/{id})
+### Пример запроса:
+```
+curl --location 'localhost:8080/api/v1/expressions/1' \
+--header 'Cookie: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MzkyODYsImlhdCI6MTc0NjczODY4NiwibG9naW4iOiIyIiwibmJmIjoxNzQ2NzM4NjkxLCJ1c2VyX2lkIjoyfQ.h2uOIrAMBZ3RmNZuwCQiy3FmPNPKqTEaC3ouH7_O450'
+```
 Если будет введен несуществующий id, то получим ошибку с кодом 404:
 ```
 {"error":"Expression not found"}
