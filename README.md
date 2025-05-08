@@ -102,7 +102,7 @@ curl --location 'localhost:8080/api/v1/login' \
 ### Получаем ответ с кодом 200 и JWT, который в дальнейшем будет использоваться для аутентификации пользователя с помощью AuthMiddleware(JWT хранится в Cookie):
 ```
 {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MDI4NzYsImlhdCI6MTc0NjcwMjI3NiwibG9naW4iOiIxIiwibmJmIjoxNzQ2NzAyMjgxLCJ1c2VyX2lkIjoxfQ.sI4G6BJPLBpRFhywQ2_hYnRU69mssKoNL99nof7sBDQ"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MzkyODYsImlhdCI6MTc0NjczODY4NiwibG9naW4iOiIyIiwibmJmIjoxNzQ2NzM4NjkxLCJ1c2VyX2lkIjoyfQ.h2uOIrAMBZ3RmNZuwCQiy3FmPNPKqTEaC3ouH7_O450"
 }
 ```
 
