@@ -149,12 +149,15 @@ func GetExpressions(user_id int, db *sql.DB) ([]Expression, error) {
 
 func GetExpressionByID(ctx context.Context, user_id, id int, db *sql.DB) (Expression, error) {
 	var answ_id int
-	var answ_result float64
+	var answ_result sql.NullFloat64
 	var q = `SELECT id, result FROM expressions
 	WHERE user_id = $1 AND id = $2`
 	err := db.QueryRowContext(ctx, q, user_id, id).Scan(&answ_id, &answ_result)
 	if err != nil {
 		return Expression{}, errors.New(`{"error": "Empty answer"}`)
 	}
-	return Expression{Id: answ_id, Result: answ_result}, nil
+	if answ_result.Valid {
+		return Expression{Id: answ_id, Result: answ_result.Float64}, nil
+	}
+	return Expression{}, errors.New(`{"error": "No expression"}`)
 }
