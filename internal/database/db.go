@@ -131,13 +131,18 @@ func GetExpressions(user_id int, db *sql.DB) ([]Expression, error) {
 	if err != nil {
 		return nil, errors.New(`{"error": "Something went wrong"}`)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var id int
-		var result float64
+		var result sql.NullFloat64
 		if err := rows.Scan(&id, &result); err != nil {
 			return nil, errors.New(`{"error": "Something went wrong"}`)
 		}
-		answ = append(answ, Expression{Id: id, Result: result})
+		expr := Expression{Id: id}
+		if result.Valid {
+			expr.Result = result.Float64
+			answ = append(answ, expr)
+		}
 	}
 	return answ, nil
 }
