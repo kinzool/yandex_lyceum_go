@@ -1,7 +1,14 @@
 # Распределённый вычислитель арифметических выражений
 ## Описание
-Я реализовал веб-сервер на языке Go, который принимает POST- и GET- запросы в endpoint'ах "/calculate", "/expressions", 
-"/expressions/id", каждый из которых выполняет определенный функционал, соответствующий условиям задачи. Эта программа позволяет распределенно вычислять арифметические выражения
+Я реализовал веб-сервер на языке Go, который принимает POST- и GET- запросы в endpoint'ах "/login", "/register", "/calculate", "/expressions", 
+"/expressions/id", каждый из которых выполняет определенный функционал, соответствующий условиям задачи. Эта программа позволяет персистентно и многопользовательски распределенно вычислять арифметические выражения.
+-------------------------------------------------------------------------------------------------------
+В этой версии приложения используется база данных sqlite, в которой создаются две таблицы: users и expressions. 
+
+В таблице users хранятся данные и зарегистрированных пользователях в столбцах с названиями id, login и password. Пароль хранится в хешированном виде, что позволяет сохранять безопасность.
+
+В таблице expressions хранятся выражения, которые добавляюся пользователями в столбцах с названиями id, user_id, expression, result.
+-------------------------------------------------------------------------------------------------------
 ## Инструкция по запуску
 ## Для того, чтобы запустить сервер, необходимо:
 ### 1) Склонировать репозиторий
@@ -41,6 +48,7 @@ go run .\cmd\agent\main.go
 ## Архитектура приложения (как все работает)
 **Оркестратор** (порт 8080 по умолчанию):
 
+-Регис
 - Принимает выражения через REST API
 - Разбивает выражения на атомарные задачи
 - Управляет очередью задач
@@ -58,14 +66,63 @@ go run .\cmd\agent\main.go
 - `ORCHESTRATOR_URL` - URL оркестратора
 - `COMPUTING_POWER` - количество параллельных задач
 
-## Server Endpoints
-### 1) Добавление выражения (POST /api/v1/calculate)
-#### Пример запроса:
+# Также можно запустить программу с помощью Docker. Для этого необходимо ввести следующую команду:
 ```
-curl --location 'http://localhost:8080/api/v1/calculate' \
+docker-compose up --build
+```
+## Server Endpoints
+### 1) Регистрация пользователя (POST /api/v1/register)
+### Пример запроса: 
+```curl --location 'localhost:8080/api/v1/register' \
 --header 'Content-Type: application/json' \
 --data '{
-  "expression": "(2+2)/2*2"
+	"login": "1",
+    "password": "1"
+}'
+```
+### Получаем ответ с кодом 200:
+```
+succesfull registration
+```
+Если метод запроса будет неправильным, то получим ошибку с кодом 405:
+```
+{"error":"Wrong Method"}
+```
+
+### 2) Вход пользователя (POST /api/v1/login)
+### Пример запроса: 
+```
+curl --location 'localhost:8080/api/v1/login' \
+--header 'Content-Type: application/json' \
+--data '{
+    "login": "1",
+    "password": "1"
+}'
+```
+
+### Получаем ответ с кодом 200 и JWT, который в дальнейшем будет использоваться для аутентификации пользователя с помощью AuthMiddleware(JWT хранится в Cookie):
+```
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MDI4NzYsImlhdCI6MTc0NjcwMjI3NiwibG9naW4iOiIxIiwibmJmIjoxNzQ2NzAyMjgxLCJ1c2VyX2lkIjoxfQ.sI4G6BJPLBpRFhywQ2_hYnRU69mssKoNL99nof7sBDQ"
+}
+```
+
+### В случае неправильно введенных данных, получим ошибку с кодом 401 и ответ:
+```
+{"error":"Invalid credentials"}
+
+```
+## Все последующие запросы выполняются в контексте авторизованного пользователя. То есть, при получении всех выражений или выражения по идентификатору в ответе будут только те выражения, которые добавлял авторизованный пользователь.
+
+
+### 3) Добавление выражения (POST /api/v1/calculate)
+#### Пример запроса:
+```
+curl --location 'localhost:8080/api/v1/calculate' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY3MDI4NzYsImlhdCI6MTc0NjcwMjI3NiwibG9naW4iOiIxIiwibmJmIjoxNzQ2NzAyMjgxLCJ1c2VyX2lkIjoxfQ.sI4G6BJPLBpRFhywQ2_hYnRU69mssKoNL99nof7sBDQ' \
+--data '{
+    "expression":"2+1"
 }'
 ```
 ### Получаем ответ с кодом 201:
@@ -78,16 +135,22 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
 ```
 {"error":"Wrong Method"}
 ```
+Если пользователь не авторизован, получим ошибку с кодом 401 и ответ:
+```
+{"error":"Missing token"}
+```
+------------------------------------------------------------------------------------
+## Этот ответ будет универсален для всех запросов от не авторизованных пользователей
+------------------------------------------------------------------------------------
 
-### 2) Получение списка выражений (GET /api/v1/expressions)
+### 4) Получение списка выражений (GET /api/v1/expressions)
 ### Получаем ответ с кодом 200:
 ```
 {
     "expressions": [
         {
             "id": "1",
-            "status": "completed",
-            "result": 4
+            "result": 3
         }
     ]
 }
@@ -107,8 +170,7 @@ curl --location 'http://localhost:8080/api/v1/calculate' \
 {
     "expression": {
         "id": "1",
-        "status": "completed",
-        "result": 4
+        "result": 3
     }
 }
 ```
@@ -138,16 +200,16 @@ POST /internal/task
 ```
 {
   "id": "1",
-  "result": 4
+  "result": 3
 }
 ```
 ## Тестирование
-Моя программа покрыта тестами, для запуска которых необходимо в консоль прописать команды:
-### Для оркестратора
+Моя программа покрыта модульными и интеграционными тестами, для запуска которых необходимо в консоль прописать команды:
+### Модульные
 ```
-go test .\tests\application\orchestrator_test.go
+go test -v .\tests\module
 ```
-### Для агента
+### Интеграционные
 ```
-go test .\tests\calculator\calculator_test.go
+go test -v .\tests\integration
 ```
