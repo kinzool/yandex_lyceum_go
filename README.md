@@ -196,7 +196,7 @@ GET /internal/task
     "task": {
         "id": "1",
         "arg1": 2,
-        "arg2": 2,
+        "arg2": 1,
         "operation": "+",
         "operation_time": 200
     }
